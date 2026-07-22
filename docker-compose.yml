@@ -9,20 +9,12 @@ services:
     env_file:
       - .env
     environment:
-      # Override the DB host so the container always reaches PostgreSQL
-      # by its service name on the shared network (never localhost here).
       POSTGRES_HOST: db
     ports:
-      # HOST:CONTAINER — makes the app reachable from outside (req #20).
       - "8000:8000"
     volumes:
-      # Persist uploaded/classified images and the model on the host so
-      # they survive container restarts.
       - ./app/static/uploads:/app/app/static/uploads
       - ./model:/app/model
-    depends_on:
-      db:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
       interval: 15s
