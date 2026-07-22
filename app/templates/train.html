@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Train{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Train the Model</h1>
+<p class="page-subtitle">
+  Upload labelled face images to retrain the smile classifier.
+</p>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+{% if success %}
+<div class="alert alert-success">{{ success }}</div>
+{% endif %}
+
+<div class="card">
+  <h2>1 · Add training images</h2>
+  <p>
+    Choose a label, then upload images that match it. Repeat for both labels so
+    the model has examples of each. Supported: JPG, JPEG, PNG ·
+    Max {{ max_size_mb }} MB per file · Up to {{ max_files }} files at a time.
+  </p>
+  <form action="/train/upload" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+      <label class="form-label" for="label">Label for these images</label>
+      <select id="label" name="label" class="form-label"
+              style="padding:0.6rem; border-radius:10px; border:1px solid var(--border);">
+        <option value="Smiling">Smiling</option>
+        <option value="Not Smiling">Not Smiling</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="files">Select images</label>
+      <input type="file" id="files" name="files" accept=".jpg,.jpeg,.png" multiple required>
+    </div>
+    <button type="submit" class="btn">Upload Images</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>2 · Currently staged</h2>
+  <p>
+    Smiling: <strong>{{ staged.smile }}</strong> ·
+    Not Smiling: <strong>{{ staged.non_smile }}</strong>
+  </p>
+  <p class="hint">You need at least one image in each label to train.</p>
+</div>
+
+<div class="card">
+  <h2>3 · Train</h2>
+  <p>
+    Trains a new model on all staged images, saves it, and clears the staged
+    uploads.
+  </p>
+  <form action="/train/run" method="post">
+    <button type="submit" class="btn">Train Model</button>
+  </form>
+</div>
+{% endblock %}

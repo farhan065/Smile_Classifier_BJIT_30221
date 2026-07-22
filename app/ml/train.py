@@ -84,6 +84,55 @@ def train_and_save():
     print(f"Model saved to: {MODEL_PATH}")
     return accuracy_score(y_test, y_pred)
 
+def train_from_directory(source_dir: Path) -> dict:
+    """Train the model from a directory containing class subfolders.
+
+    Expects subfolders named like CLASS_FOLDERS (e.g. 'smile', 'non_smile').
+    Returns a small summary dict. Used by both the CLI and the Train page.
+    """
+    features, labels = [], []
+    per_class_counts = {}
+
+    for folder_name, label in CLASS_FOLDERS.items():
+        folder = source_dir / folder_name
+        count = 0
+        if folder.exists():
+            for image_path in folder.iterdir():
+                if image_path.suffix.lower() not in VALID_EXTENSIONS:
+                    continue
+                try:
+                    with Image.open(image_path) as img:
+                        features.append(image_to_features(img))
+                        labels.append(label)
+                        count += 1
+                except Exception as exc:
+                    print(f"  Skipping {image_path.name}: {exc}")
+        per_class_counts[folder_name] = count
+
+    # We need at least one image in EACH class to train a 2-class model.
+    present_classes = [c for c, n in per_class_counts.items() if n > 0]
+    if len(present_classes) < 2:
+        raise ValueError(
+            "Training needs images in BOTH classes (smiling and not smiling). "
+            f"Currently staged: {per_class_counts}."
+        )
+
+    X = np.array(features)
+    y = np.array(labels)
+
+    model = build_model()
+    model.fit(X, y)  # train on all staged images
+
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    with open(MODEL_PATH, "wb") as f:
+        pickle.dump(model, f)
+
+    return {
+        "total_images": len(X),
+        "per_class": per_class_counts,
+    }
+
+
 
 if __name__ == "__main__":
     train_and_save()

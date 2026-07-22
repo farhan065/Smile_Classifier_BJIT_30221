@@ -1,41 +1,88 @@
 """Smile Classifier - 30221
 FastAPI application entry point.
+
+Routes:
+  GET  /                -> Home page (explains model & framework)
+  GET  /classify        -> show upload form
+  POST /classify        -> validate, predict, save to DB, show result
+  GET  /train           -> show training page
+  POST /train/upload    -> validate & stage training images by label
+  POST /train/run       -> train on staged images, save model, delete uploads
+  GET  /history         -> table of all past classifications
 """
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
+from typing import List
 
-from fastapi import Depends, FastAPI, File, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image
 from sqlalchemy.orm import Session
 
-from app.config import MAX_FILE_SIZE_MB, UPLOAD_DIR
+from app.config import (
+    MAX_FILE_SIZE_MB,
+    MAX_TRAIN_FILES,
+    TRAIN_CLASS_FOLDERS,
+    TRAIN_UPLOAD_DIR,
+    UPLOAD_DIR,
+)
 from app.database import get_db
 from app.ml import inference
+from app.ml.train import train_from_directory
 from app.models import History
 from app.utils import UploadError, save_as_jpg, validate_and_read
 
+# --------------------------------------------------------------------------- #
+# Application setup
+# --------------------------------------------------------------------------- #
 BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(title="Smile Classifier - 30221")
+
+# Serve static files (CSS, uploaded images) directly to the browser.
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+# Tell Jinja2 where the HTML templates live.
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
+# Ensure the uploads folder exists at startup.
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+# --------------------------------------------------------------------------- #
+# Helpers
+# --------------------------------------------------------------------------- #
+def _count_staged() -> dict:
+    """Count how many images are staged in each training class folder."""
+    counts = {"smile": 0, "non_smile": 0}
+    for folder in counts:
+        path = TRAIN_UPLOAD_DIR / folder
+        if path.exists():
+            counts[folder] = sum(
+                1 for f in path.iterdir() if f.suffix.lower() == ".jpg"
+            )
+    return counts
+
+
+# --------------------------------------------------------------------------- #
+# Home (requirement #7)
+# --------------------------------------------------------------------------- #
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    """Home page (requirement #7)."""
+    """Home page — explains the model and framework."""
     return templates.TemplateResponse(request, "home.html", {"active": "home"})
 
 
+# --------------------------------------------------------------------------- #
+# Classify (requirements #1, #3, #4, #11, #13, #15)
+# --------------------------------------------------------------------------- #
 @app.get("/classify", response_class=HTMLResponse)
 def classify_form(request: Request):
-    """Show the upload form."""
+    """Show the classify upload form."""
     return templates.TemplateResponse(
         request, "classify.html",
         {"active": "classify", "max_size_mb": MAX_FILE_SIZE_MB},
@@ -95,4 +142,111 @@ def classify_submit(
             "predicted_class": predicted_class,
             "confidence": round(confidence * 100, 1),
         },
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Train (requirements #2, #8, #11, #12)
+# --------------------------------------------------------------------------- #
+@app.get("/train", response_class=HTMLResponse)
+def train_form(request: Request):
+    """Show the training upload page."""
+    return templates.TemplateResponse(
+        request, "train.html",
+        {
+            "active": "train",
+            "max_size_mb": MAX_FILE_SIZE_MB,
+            "max_files": MAX_TRAIN_FILES,
+            "staged": _count_staged(),
+        },
+    )
+
+
+@app.post("/train/upload", response_class=HTMLResponse)
+def train_upload(
+    request: Request,
+    label: str = Form(...),
+    files: List[UploadFile] = File(...),
+):
+    """Validate and stage uploaded training images under their class folder."""
+    ctx = {
+        "active": "train",
+        "max_size_mb": MAX_FILE_SIZE_MB,
+        "max_files": MAX_TRAIN_FILES,
+    }
+
+    # Requirement #2 — limit the number of files per upload.
+    if len(files) > MAX_TRAIN_FILES:
+        ctx["staged"] = _count_staged()
+        ctx["error"] = (
+            f"You selected {len(files)} files. "
+            f"Please upload at most {MAX_TRAIN_FILES} at a time."
+        )
+        return templates.TemplateResponse(request, "train.html", ctx)
+
+    # Map the friendly label to its folder (e.g. "Smiling" -> "smile").
+    folder_name = TRAIN_CLASS_FOLDERS.get(label)
+    if folder_name is None:
+        ctx["staged"] = _count_staged()
+        ctx["error"] = "Invalid label selected."
+        return templates.TemplateResponse(request, "train.html", ctx)
+
+    dest_dir = TRAIN_UPLOAD_DIR / folder_name
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    saved = 0
+    try:
+        for file in files:
+            data = validate_and_read(file)      # reqs #1, #3
+            jpg_path = save_as_jpg(data)         # req #11 (saved into UPLOAD_DIR)
+            # Move the converted JPG into the correct class staging folder.
+            final_path = dest_dir / jpg_path.name
+            shutil.move(str(jpg_path), str(final_path))
+            saved += 1
+    except UploadError as exc:
+        ctx["staged"] = _count_staged()
+        ctx["error"] = str(exc)
+        return templates.TemplateResponse(request, "train.html", ctx)
+
+    ctx["staged"] = _count_staged()
+    ctx["success"] = f"Uploaded {saved} image(s) labelled '{label}'."
+    return templates.TemplateResponse(request, "train.html", ctx)
+
+
+@app.post("/train/run", response_class=HTMLResponse)
+def train_run(request: Request):
+    """Train on all staged images, save the model, then delete the uploads."""
+    ctx = {
+        "active": "train",
+        "max_size_mb": MAX_FILE_SIZE_MB,
+        "max_files": MAX_TRAIN_FILES,
+    }
+    try:
+        summary = train_from_directory(TRAIN_UPLOAD_DIR)   # req #12 (train + save)
+    except ValueError as exc:
+        ctx["staged"] = _count_staged()
+        ctx["error"] = str(exc)
+        return templates.TemplateResponse(request, "train.html", ctx)
+
+    # Requirement #12 — delete the uploaded training images after training.
+    if TRAIN_UPLOAD_DIR.exists():
+        shutil.rmtree(TRAIN_UPLOAD_DIR)
+
+    ctx["staged"] = _count_staged()
+    ctx["success"] = (
+        f"Model trained on {summary['total_images']} image(s) "
+        f"and saved. Staged uploads cleared."
+    )
+    return templates.TemplateResponse(request, "train.html", ctx)
+
+
+# --------------------------------------------------------------------------- #
+# History (requirement #14)
+# --------------------------------------------------------------------------- #
+@app.get("/history", response_class=HTMLResponse)
+def history(request: Request, db: Session = Depends(get_db)):
+    """Show all past classifications, newest first."""
+    records = db.query(History).order_by(History.created_at.desc()).all()
+    return templates.TemplateResponse(
+        request, "history.html", {"active": "history", "records": records}
     )

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Classification History</h1>
+<p class="page-subtitle">Every image you've classified, most recent first.</p>
+
+<div class="card">
+  {% if records %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Class</th>
+          <th>Date &amp; Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+        <tr>
+          <td><img src="/{{ record.image_path.replace('\\', '/') }}"
+                   alt="thumb" class="thumb"></td>
+          <td>
+            <span class="result-badge
+              {%- if record.predicted_class == 'Smiling' %} badge-smiling
+              {%- else %} badge-not-smiling{% endif %}"
+              style="font-size:0.9rem; padding:0.3rem 0.8rem;">
+              {{ record.predicted_class }}
+            </span>
+          </td>
+          <td>{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    No classifications yet. Head to the Classify page to get started.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
