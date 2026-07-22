@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+pillow
+numpy
+scikit-learn
+scikit-image
+sqlalchemy
+psycopg2-binary
+python-dotenv

@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16
+    container_name: smile_db_30221
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - smile_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smile_net
+
+volumes:
+  smile_db_data:
+
+networks:
+  smile_net:
+    external: true
+    name: YSDTP_B5_AI_30221
