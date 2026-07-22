@@ -1,0 +1,38 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: smile-classifier-30221:latest
+    container_name: smile_app_30221
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Override the DB host so the container always reaches PostgreSQL
+      # by its service name on the shared network (never localhost here).
+      POSTGRES_HOST: db
+    ports:
+      # HOST:CONTAINER — makes the app reachable from outside (req #20).
+      - "8000:8000"
+    volumes:
+      # Persist uploaded/classified images and the model on the host so
+      # they survive container restarts.
+      - ./app/static/uploads:/app/app/static/uploads
+      - ./model:/app/model
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - smile_net
+
+networks:
+  smile_net:
+    external: true
+    name: YSDTP_B5_AI_30221

@@ -1,7 +1,23 @@
+# Python
 venv/
 __pycache__/
 *.pyc
+*.pyo
+
+# The dataset is huge and NOT needed inside the image (the trained
+# model is already saved as a pickle). Excluding it keeps the image small.
+data/
+
+# Local dev files
+.git/
+.gitignore
 .env
-#data/
-#model/*.pkl
+*.md
+
+# Staged training uploads and classify uploads (created at runtime)
+app/static/train_uploads/
 app/static/uploads/*
+
+# Docker files themselves
+Dockerfile
+docker-compose*.yml
