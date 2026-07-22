@@ -1,0 +1,166 @@
+/* ============================================================
+   Smile Classifier — modern, warm, friendly UI
+   Design tokens live in :root so the whole theme is editable
+   from one place (a maintainability best practice).
+   ============================================================ */
+:root {
+  --bg: #fdf6f0;
+  --surface: #ffffff;
+  --text: #2d2a32;
+  --text-muted: #6b6570;
+  --primary: #ff7a59;
+  --primary-dark: #e85d3d;
+  --accent: #ffd166;
+  --success: #23a06b;
+  --success-bg: #e6f6ee;
+  --danger: #d64545;
+  --danger-bg: #fbeaea;
+  --border: #efe6de;
+  --shadow: 0 4px 24px rgba(45, 42, 50, 0.08);
+  --radius: 16px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- Navbar ---------- */
+.navbar {
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.nav-brand { font-size: 1.25rem; font-weight: 700; padding: 1rem 0; }
+.nav-links { list-style: none; display: flex; gap: 0.5rem; }
+.nav-links a {
+  display: block;
+  padding: 1.1rem 1.1rem;
+  text-decoration: none;
+  color: var(--text-muted);
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nav-links a:hover { color: var(--primary); }
+.nav-links a.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+/* ---------- Layout ---------- */
+.container {
+  width: 100%;
+  max-width: 860px;
+  margin: 2.5rem auto;
+  padding: 0 1.5rem;
+  flex: 1;
+}
+.page-title { font-size: 2rem; margin-bottom: 0.5rem; }
+.page-subtitle { color: var(--text-muted); margin-bottom: 2rem; }
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+.card h2 { font-size: 1.25rem; margin-bottom: 0.75rem; color: var(--primary-dark); }
+.card p { color: var(--text-muted); margin-bottom: 0.75rem; }
+.card ul { color: var(--text-muted); padding-left: 1.25rem; margin-bottom: 0.5rem; }
+.card li { margin-bottom: 0.35rem; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.8rem 1.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.05s;
+  text-decoration: none;
+}
+.btn:hover { background: var(--primary-dark); }
+.btn:active { transform: translateY(1px); }
+
+/* ---------- Forms & file inputs ---------- */
+.form-group { margin-bottom: 1.5rem; }
+.form-label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+.hint { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.4rem; }
+input[type="file"] {
+  width: 100%;
+  padding: 1.5rem;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: #fffaf6;
+  cursor: pointer;
+  font-family: var(--font);
+}
+input[type="file"]:hover { border-color: var(--primary); }
+
+/* ---------- Alerts (validation messages) ---------- */
+.alert {
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+.alert-error { background: var(--danger-bg); color: var(--danger); }
+.alert-success { background: var(--success-bg); color: var(--success); }
+
+/* ---------- Result badge ---------- */
+.result-badge {
+  display: inline-block;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.badge-smiling { background: var(--success-bg); color: var(--success); }
+.badge-not-smiling { background: var(--danger-bg); color: var(--danger); }
+.result-image {
+  max-width: 320px;
+  width: 100%;
+  border-radius: 12px;
+  margin: 1.5rem 0;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- Table (history) ---------- */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 0.9rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
+th { background: #fbf3ec; font-weight: 600; color: var(--text); }
+tr:last-child td { border-bottom: none; }
+.thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; }
+.empty-state { text-align: center; color: var(--text-muted); padding: 3rem 1rem; }
+
+/* ---------- Footer ---------- */
+.footer {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 600px) {
+  .navbar { flex-direction: column; padding: 0 1rem; }
+  .nav-links a { padding: 0.75rem; }
+}

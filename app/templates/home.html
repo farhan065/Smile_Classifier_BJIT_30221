@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Smile Classifier</h1>
+<p class="page-subtitle">
+  A web app that decides whether a face is <strong>smiling</strong> or
+  <strong>not smiling</strong>, built with classic machine learning.
+</p>
+
+<div class="card">
+  <h2>What this app does</h2>
+  <p>
+    Upload a photo of a face and the model predicts one of two classes —
+    <em>Smiling</em> or <em>Not Smiling</em> — along with a confidence score.
+    Every classification is stored so you can review past results on the
+    History page.
+  </p>
+</div>
+
+<div class="card">
+  <h2>Framework &amp; model — and why</h2>
+  <p>
+    The classifier is built with <strong>scikit-learn</strong>, a mature and
+    lightweight machine-learning library. For this two-class image problem it
+    is an excellent fit: it trains fast, needs no GPU, and is simple to deploy.
+  </p>
+  <p>
+    The model is a <strong>Support Vector Machine (SVM)</strong> trained on
+    <strong>HOG (Histogram of Oriented Gradients)</strong> features. HOG
+    describes the <em>shape and edges</em> of a face — the curve of the mouth,
+    the raised cheeks of a smile — rather than raw pixel brightness, which makes
+    it robust to lighting. An SVM then finds the boundary that best separates
+    smiling from non-smiling faces. This pairing is accurate on modest datasets
+    and far simpler than a deep neural network, which would be overkill here.
+  </p>
+</div>
+
+<div class="card">
+  <h2>How the training script works</h2>
+  <ul>
+    <li>Every image is converted to grayscale and resized to 64×64 so all
+        inputs are uniform.</li>
+    <li>HOG features are extracted from each image, turning it into a vector
+        of numbers the model can learn from.</li>
+    <li>A <strong>StandardScaler + SVM pipeline</strong> is trained; 20% of the
+        data is held back to measure honest accuracy on unseen images.</li>
+    <li>The trained pipeline is saved to a <strong>pickle file</strong> so it
+        can be reused without retraining.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>How the inference script works</h2>
+  <ul>
+    <li>It first checks that the trained pickle model exists; if not, it asks
+        you to train first.</li>
+    <li>The uploaded image is preprocessed with the <em>exact same</em> steps as
+        training (grayscale → resize → HOG), guaranteeing consistency.</li>
+    <li>The model predicts the class and a confidence score, which is shown to
+        you and saved to the database.</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>Technology stack</h2>
+  <ul>
+    <li><strong>FastAPI</strong> + <strong>Jinja2</strong> — web framework and templating</li>
+    <li><strong>scikit-learn</strong> + <strong>scikit-image</strong> — model and HOG features</li>
+    <li><strong>Pillow</strong> — image processing and JPG conversion</li>
+    <li><strong>PostgreSQL</strong> + <strong>SQLAlchemy</strong> — database and ORM</li>
+    <li><strong>Docker</strong> — containerized, reproducible deployment</li>
+  </ul>
+</div>
+{% endblock %}
