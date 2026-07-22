@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Classify{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Classify an Image</h1>
+<p class="page-subtitle">
+  Upload a face photo and the model will predict whether the person is smiling.
+</p>
+
+{% if error %}
+<div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+<div class="card">
+  <form action="/classify" method="post" enctype="multipart/form-data">
+    <div class="form-group">
+      <label class="form-label" for="file">Choose an image</label>
+      <input type="file" id="file" name="file" accept=".jpg,.jpeg,.png" required>
+      <p class="hint">
+        Supported formats: JPG, JPEG, PNG · Maximum size: {{ max_size_mb }} MB
+      </p>
+    </div>
+    <button type="submit" class="btn">Classify</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Result{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Classification Result</h1>
+
+<div class="card" style="text-align: center;">
+  <img src="{{ image_url }}" alt="Classified image" class="result-image">
+  <div>
+    {% if predicted_class == 'Smiling' %}
+      <span class="result-badge badge-smiling">😊 {{ predicted_class }}</span>
+    {% else %}
+      <span class="result-badge badge-not-smiling">😐 {{ predicted_class }}</span>
+    {% endif %}
+  </div>
+  <p style="margin-top: 1rem;">Confidence: <strong>{{ confidence }}%</strong></p>
+</div>
+
+<div style="text-align: center;">
+  <a href="/classify" class="btn">Classify Another</a>
+</div>
+{% endblock %}
