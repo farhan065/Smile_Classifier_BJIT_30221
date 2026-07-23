@@ -13,7 +13,6 @@ Routes:
 from __future__ import annotations
 
 import shutil
-import time
 from pathlib import Path
 from typing import List
 
@@ -22,7 +21,6 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from PIL import Image
-from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import (
@@ -32,7 +30,7 @@ from app.config import (
     TRAIN_UPLOAD_DIR,
     UPLOAD_DIR,
 )
-from app.database import engine, get_db
+from app.database import get_db
 from app.ml import inference
 from app.ml.train import train_from_directory
 from app.models import History
@@ -53,30 +51,6 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 # Ensure the uploads folder exists at startup.
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-
-# --------------------------------------------------------------------------- #
-# Startup: wait for the database (requirement #5)
-# --------------------------------------------------------------------------- #
-@app.on_event("startup")
-def wait_for_database() -> None:
-    """Ensure the database is reachable before serving requests.
-
-    Retries the connection so the app doesn't crash if the database is
-    momentarily unavailable at startup. This is a more robust, application
-    level version of "start only after the database is healthy".
-    """
-    max_retries = 10
-    for attempt in range(1, max_retries + 1):
-        try:
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            print("Database connection established.")
-            return
-        except Exception as exc:
-            print(f"Database not ready (attempt {attempt}/{max_retries}): {exc}")
-            time.sleep(3)
-    raise RuntimeError("Could not connect to the database after several retries.")
 
 
 # --------------------------------------------------------------------------- #

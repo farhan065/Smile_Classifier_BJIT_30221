@@ -1,4 +1,24 @@
 services:
+  db:
+    image: postgres:16
+    container_name: smile_db_30221
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - smile_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smile_net
+
   app:
     build:
       context: .
@@ -6,15 +26,22 @@ services:
     image: smile-classifier-30221:latest
     container_name: smile_app_30221
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB}
+      MAX_TRAIN_FILES: ${MAX_TRAIN_FILES}
     ports:
       - "8000:8000"
     volumes:
       - ./app/static/uploads:/app/app/static/uploads
       - ./model:/app/model
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
       interval: 15s
@@ -23,6 +50,9 @@ services:
       start_period: 20s
     networks:
       - smile_net
+
+volumes:
+  smile_db_data:
 
 networks:
   smile_net:
