@@ -40,7 +40,7 @@
           ({{ model_info.per_class.smile }} smiling,
            {{ model_info.per_class.non_smile }} not smiling)</li>
       <li><strong>Data source:</strong> {{ model_info.source }}</li>
-      <li><strong>Last trained:</strong> {{ model_info.trained_at }}</li>
+      <li><strong>Last trained:</strong> {{ model_info.trained_at | isolocaltime }}</li>
     </ul>
   {% else %}
     <p>No trained model found. Visit the Train page to train one.</p>

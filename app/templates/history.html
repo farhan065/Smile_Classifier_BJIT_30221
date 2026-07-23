@@ -22,14 +22,19 @@
           <td><img src="/{{ record.image_path.replace('\\', '/') }}"
                    alt="thumb" class="thumb"></td>
           <td>
-            <span class="result-badge
-              {%- if record.predicted_class == 'Smiling' %} badge-smiling
-              {%- else %} badge-not-smiling{% endif %}"
-              style="font-size:0.9rem; padding:0.3rem 0.8rem;">
-              {{ record.predicted_class }}
-            </span>
+            {% if record.predicted_class == 'Smiling' %}
+              <span class="result-badge badge-smiling"
+                    style="font-size:0.9rem; padding:0.3rem 0.8rem;">
+                {{ record.predicted_class }}
+              </span>
+            {% else %}
+              <span class="result-badge badge-not-smiling"
+                    style="font-size:0.9rem; padding:0.3rem 0.8rem;">
+                {{ record.predicted_class }}
+              </span>
+            {% endif %}
           </td>
-          <td>{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td>{{ record.created_at | localtime }}</td>
         </tr>
         {% endfor %}
       </tbody>

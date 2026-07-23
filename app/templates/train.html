@@ -22,7 +22,8 @@
       {{ model_info.source }}
     </p>
     <p class="hint">
-      {{ model_info.evaluation }} &middot; Last trained: {{ model_info.trained_at }}
+      {{ model_info.evaluation }} &middot;
+      Last trained: {{ model_info.trained_at | isolocaltime }}
     </p>
   {% else %}
     <p>No model has been trained yet.</p>
@@ -46,8 +47,7 @@
   <form action="/train/upload" method="post" enctype="multipart/form-data">
     <div class="form-group">
       <label class="form-label" for="label">Label for these images</label>
-      <select id="label" name="label"
-              style="padding:0.6rem; border-radius:10px; border:1px solid var(--border); font-family:var(--font); font-size:1rem;">
+      <select id="label" name="label">
         <option value="Smiling">Smiling</option>
         <option value="Not Smiling">Not Smiling</option>
       </select>

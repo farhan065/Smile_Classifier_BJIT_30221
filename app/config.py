@@ -1,4 +1,8 @@
-"""Central configuration, loaded from environment variables (.env)."""
+"""Central configuration, loaded from environment variables (.env).
+
+Keeping all settings in one place means no magic values scattered through
+the code, and secrets stay out of the source via the .env file.
+"""
 from __future__ import annotations
 
 import os
@@ -43,11 +47,16 @@ MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 MAX_TRAIN_FILES = int(os.getenv("MAX_TRAIN_FILES", "10"))
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
+# --- Presentation ---
+# Timestamps are STORED in UTC (unambiguous). This setting only controls
+# how they are DISPLAYED to users.
+DISPLAY_TIMEZONE = os.getenv("DISPLAY_TIMEZONE", "Asia/Dhaka")
+
 # --- Filesystem paths ---
 UPLOAD_DIR = BASE_DIR / "app" / "static" / "uploads"
 MODEL_PATH = BASE_DIR / "model" / "smile_model.pkl"
-DATA_DIR = BASE_DIR / "data"
 MODEL_META_PATH = BASE_DIR / "model" / "model_meta.json"
+DATA_DIR = BASE_DIR / "data"
 
 # Staging folder where Train-page uploads accumulate by class before training.
 TRAIN_UPLOAD_DIR = BASE_DIR / "app" / "static" / "train_uploads"

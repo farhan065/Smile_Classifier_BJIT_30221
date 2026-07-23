@@ -13,8 +13,10 @@ Routes:
 from __future__ import annotations
 
 import shutil
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse
@@ -24,6 +26,7 @@ from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.config import (
+    DISPLAY_TIMEZONE,
     MAX_FILE_SIZE_MB,
     MAX_TRAIN_FILES,
     TRAIN_CLASS_FOLDERS,
@@ -48,6 +51,39 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 # Tell Jinja2 where the HTML templates live.
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
+
+# --------------------------------------------------------------------------- #
+# Template filters
+#
+# Timestamps are STORED in UTC (unambiguous and portable). These filters
+# only affect how they are DISPLAYED, using the configured timezone.
+# --------------------------------------------------------------------------- #
+def to_local_time(value, fmt: str = "%Y-%m-%d %I:%M:%S %p") -> str:
+    """Convert a datetime (from the database) to the display timezone."""
+    if value is None:
+        return ""
+    # Values coming back from the database may be naive; treat them as UTC.
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(ZoneInfo(DISPLAY_TIMEZONE)).strftime(fmt)
+
+
+def iso_to_local_time(value, fmt: str = "%Y-%m-%d %I:%M:%S %p") -> str:
+    """Convert an ISO-8601 UTC string (from model metadata) to local time."""
+    if not value:
+        return ""
+    try:
+        parsed = datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return value  # fall back to showing the raw value
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(ZoneInfo(DISPLAY_TIMEZONE)).strftime(fmt)
+
+
+templates.env.filters["localtime"] = to_local_time
+templates.env.filters["isolocaltime"] = iso_to_local_time
 
 # Ensure the uploads folder exists at startup.
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
