@@ -9,12 +9,17 @@
 <body>
   <nav class="navbar">
     <div class="nav-brand">😊 Smile Classifier</div>
-    <ul class="nav-links">
-      <li><a href="/" class="{% if active == 'home' %}active{% endif %}">Home</a></li>
-      <li><a href="/train" class="{% if active == 'train' %}active{% endif %}">Train</a></li>
-      <li><a href="/classify" class="{% if active == 'classify' %}active{% endif %}">Classify</a></li>
-      <li><a href="/history" class="{% if active == 'history' %}active{% endif %}">History</a></li>
-    </ul>
+    <div style="display:flex; align-items:center;">
+      <ul class="nav-links">
+        <li><a href="/" class="{% if active == 'home' %}active{% endif %}">Home</a></li>
+        <li><a href="/train" class="{% if active == 'train' %}active{% endif %}">Train</a></li>
+        <li><a href="/classify" class="{% if active == 'classify' %}active{% endif %}">Classify</a></li>
+        <li><a href="/history" class="{% if active == 'history' %}active{% endif %}">History</a></li>
+      </ul>
+      <button class="theme-toggle" id="themeToggle"
+              onclick="toggleTheme()" title="Toggle dark mode"
+              aria-label="Toggle dark mode">🌙</button>
+    </div>
   </nav>
 
   <main class="container">
@@ -22,5 +27,37 @@
   </main>
 
   <footer class="footer">Smile Classifier · ID 30221</footer>
+
+  <script>
+    // Persist the theme in a cookie so it survives page navigation.
+    // Light mode remains the default when no cookie is set.
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? match[2] : null;
+    }
+
+    function applyTheme(theme) {
+      const root = document.documentElement;
+      const button = document.getElementById('themeToggle');
+      if (theme === 'dark') {
+        root.setAttribute('data-theme', 'dark');
+        if (button) button.textContent = '☀️';
+      } else {
+        root.removeAttribute('data-theme');
+        if (button) button.textContent = '🌙';
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const next = isDark ? 'light' : 'dark';
+      // max-age is one year, in seconds.
+      document.cookie = 'theme=' + next + '; path=/; max-age=31536000';
+      applyTheme(next);
+    }
+
+    // Restore the saved theme as soon as the page loads.
+    applyTheme(getCookie('theme') || 'light');
+  </script>
 </body>
 </html>
