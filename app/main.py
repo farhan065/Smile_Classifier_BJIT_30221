@@ -68,13 +68,26 @@ def _count_staged() -> dict:
     return counts
 
 
+def _train_context() -> dict:
+    """Base template context shared by all Train page responses."""
+    return {
+        "active": "train",
+        "max_size_mb": MAX_FILE_SIZE_MB,
+        "max_files": MAX_TRAIN_FILES,
+        "model_info": inference.get_model_info(),
+    }
+
+
 # --------------------------------------------------------------------------- #
 # Home (requirement #7)
 # --------------------------------------------------------------------------- #
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     """Home page — explains the model and framework."""
-    return templates.TemplateResponse(request, "home.html", {"active": "home"})
+    return templates.TemplateResponse(
+        request, "home.html",
+        {"active": "home", "model_info": inference.get_model_info()},
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -151,15 +164,9 @@ def classify_submit(
 @app.get("/train", response_class=HTMLResponse)
 def train_form(request: Request):
     """Show the training upload page."""
-    return templates.TemplateResponse(
-        request, "train.html",
-        {
-            "active": "train",
-            "max_size_mb": MAX_FILE_SIZE_MB,
-            "max_files": MAX_TRAIN_FILES,
-            "staged": _count_staged(),
-        },
-    )
+    ctx = _train_context()
+    ctx["staged"] = _count_staged()
+    return templates.TemplateResponse(request, "train.html", ctx)
 
 
 @app.post("/train/upload", response_class=HTMLResponse)
@@ -169,11 +176,7 @@ def train_upload(
     files: List[UploadFile] = File(...),
 ):
     """Validate and stage uploaded training images under their class folder."""
-    ctx = {
-        "active": "train",
-        "max_size_mb": MAX_FILE_SIZE_MB,
-        "max_files": MAX_TRAIN_FILES,
-    }
+    ctx = _train_context()
 
     # Requirement #2 — limit the number of files per upload.
     if len(files) > MAX_TRAIN_FILES:
@@ -216,14 +219,10 @@ def train_upload(
 @app.post("/train/run", response_class=HTMLResponse)
 def train_run(request: Request):
     """Train on all staged images, save the model, then delete the uploads."""
-    ctx = {
-        "active": "train",
-        "max_size_mb": MAX_FILE_SIZE_MB,
-        "max_files": MAX_TRAIN_FILES,
-    }
     try:
         summary = train_from_directory(TRAIN_UPLOAD_DIR)   # req #12 (train + save)
     except ValueError as exc:
+        ctx = _train_context()
         ctx["staged"] = _count_staged()
         ctx["error"] = str(exc)
         return templates.TemplateResponse(request, "train.html", ctx)
@@ -232,10 +231,14 @@ def train_run(request: Request):
     if TRAIN_UPLOAD_DIR.exists():
         shutil.rmtree(TRAIN_UPLOAD_DIR)
 
+    # Built AFTER training so the model info reflects the new model.
+    ctx = _train_context()
     ctx["staged"] = _count_staged()
     ctx["success"] = (
-        f"Model trained on {summary['total_images']} image(s) "
-        f"and saved. Staged uploads cleared."
+        f"Model trained on {summary['total_images']} image(s) and saved. "
+        + (f"Estimated accuracy: {summary['accuracy']}%. "
+           if summary["accuracy"] is not None else "")
+        + "Staged uploads cleared."
     )
     return templates.TemplateResponse(request, "train.html", ctx)
 

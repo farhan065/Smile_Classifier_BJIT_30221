@@ -1,6 +1,6 @@
 """Inference: predict smiling / not smiling for a single image."""
 from __future__ import annotations
-
+import json
 import pickle
 from pathlib import Path
 
@@ -10,6 +10,7 @@ from app.ml.preprocessing import image_to_features
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 MODEL_PATH = BASE_DIR / "model" / "smile_model.pkl"
+MODEL_META_PATH = BASE_DIR / "model" / "model_meta.json"
 
 CLASS_NAMES = {0: "Not Smiling", 1: "Smiling"}
 
@@ -35,6 +36,17 @@ def predict(image: Image.Image):
     label = int(model.predict(features)[0])
     confidence = float(model.predict_proba(features)[0][label])
     return CLASS_NAMES[label], confidence
+
+
+def get_model_info() -> dict | None:
+    """Return saved model metadata, or None if unavailable."""
+    if not MODEL_META_PATH.exists():
+        return None
+    try:
+        with open(MODEL_META_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
 
 
 if __name__ == "__main__":

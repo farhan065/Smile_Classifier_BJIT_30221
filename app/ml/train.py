@@ -4,13 +4,15 @@ Run from the project root with:  python -m app.ml.train
 """
 from __future__ import annotations
 
+import json
 import pickle
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, cross_val_score, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -22,6 +24,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]   # .../smile-classifier-30221
 DATA_DIR = BASE_DIR / "data"
 MODEL_DIR = BASE_DIR / "model"
 MODEL_PATH = MODEL_DIR / "smile_model.pkl"
+MODEL_META_PATH = MODEL_DIR / "model_meta.json"
 
 # Folder name -> numeric label the model learns.
 CLASS_FOLDERS = {"non_smile": 0, "smile": 1}
@@ -55,7 +58,49 @@ def build_model() -> Pipeline:
     ])
 
 
+def estimate_accuracy(X: np.ndarray, y: np.ndarray):
+    """Estimate accuracy using stratified k-fold cross-validation.
+
+    On small datasets a single train/test split is unreliable, so we average
+    across folds instead. Returns (accuracy, evaluation_description) or
+    (None, reason) when there is too little data to evaluate at all.
+    """
+    smallest_class = int(min(np.sum(y == 0), np.sum(y == 1)))
+
+    # Need at least 2 samples in the smaller class to hold one out per fold.
+    if smallest_class < 2:
+        return None, "Not enough images per class to evaluate"
+
+    n_splits = min(5, smallest_class)
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+    scores = cross_val_score(build_model(), X, y, cv=cv, scoring="accuracy")
+    return float(scores.mean()), f"{n_splits}-fold cross-validation"
+
+
+def save_metadata(accuracy: float | None, total_images: int, per_class: dict,
+                  source: str, evaluation: str) -> None:
+    """Write model metrics to a JSON file so the web app can display them.
+
+    Kept separate from the pickle so metadata can be read cheaply without
+    unpickling the whole model.
+    """
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    meta = {
+        "accuracy": round(accuracy * 100, 2) if accuracy is not None else None,
+        "total_images": total_images,
+        "per_class": per_class,
+        "source": source,
+        "evaluation": evaluation,
+        "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "model_type": "SVM (RBF kernel) on HOG features",
+        "framework": "scikit-learn",
+    }
+    with open(MODEL_META_PATH, "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2)
+
+
 def train_and_save():
+    """Train on the full dataset in data/ with a held-out test split."""
     print("Loading images and extracting features...")
     X, y = load_dataset(DATA_DIR)
     if len(X) == 0:
@@ -63,7 +108,7 @@ def train_and_save():
     print(f"Loaded {len(X)} images "
           f"({int((y == 1).sum())} smiling, {int((y == 0).sum())} not smiling).")
 
-    # Hold back 20% to honestly measure accuracy on unseen images.
+    # Plenty of data here, so a single held-out test split is reliable.
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
@@ -73,7 +118,8 @@ def train_and_save():
     model.fit(X_train, y_train)
 
     y_pred = model.predict(X_test)
-    print(f"\nTest accuracy: {accuracy_score(y_test, y_pred):.2%}\n")
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"\nTest accuracy: {accuracy:.2%}\n")
     print(classification_report(
         y_test, y_pred, target_names=["Not Smiling", "Smiling"]
     ))
@@ -82,13 +128,25 @@ def train_and_save():
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(model, f)
     print(f"Model saved to: {MODEL_PATH}")
-    return accuracy_score(y_test, y_pred)
+
+    save_metadata(
+        accuracy=accuracy,
+        total_images=len(X),
+        per_class={"smile": int((y == 1).sum()),
+                   "non_smile": int((y == 0).sum())},
+        source="Full dataset (data/)",
+        evaluation="20% held-out test set",
+    )
+    print(f"Metadata saved to: {MODEL_META_PATH}")
+    return accuracy
+
 
 def train_from_directory(source_dir: Path) -> dict:
     """Train the model from a directory containing class subfolders.
 
     Expects subfolders named like CLASS_FOLDERS (e.g. 'smile', 'non_smile').
-    Returns a small summary dict. Used by both the CLI and the Train page.
+    Accuracy is estimated with cross-validation (reliable on small batches),
+    then the final model is fitted on ALL images so none are wasted.
     """
     features, labels = [], []
     per_class_counts = {}
@@ -120,18 +178,30 @@ def train_from_directory(source_dir: Path) -> dict:
     X = np.array(features)
     y = np.array(labels)
 
+    # 1. Measure accuracy with cross-validation.
+    accuracy, evaluation = estimate_accuracy(X, y)
+
+    # 2. Fit the final model on every image (nothing wasted).
     model = build_model()
-    model.fit(X, y)  # train on all staged images
+    model.fit(X, y)
 
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(model, f)
 
+    save_metadata(
+        accuracy=accuracy,
+        total_images=len(X),
+        per_class=per_class_counts,
+        source="Uploaded images (Train page)",
+        evaluation=evaluation,
+    )
+
     return {
         "total_images": len(X),
         "per_class": per_class_counts,
+        "accuracy": round(accuracy * 100, 2) if accuracy is not None else None,
     }
-
 
 
 if __name__ == "__main__":

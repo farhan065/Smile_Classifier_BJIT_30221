@@ -1,0 +1,13 @@
+{
+  "accuracy": 94.78,
+  "total_images": 1244,
+  "per_class": {
+    "smile": 641,
+    "non_smile": 603
+  },
+  "source": "Full dataset (data/)",
+  "evaluation": "20% held-out test set",
+  "trained_at": "2026-07-23T05:04:39+00:00",
+  "model_type": "SVM (RBF kernel) on HOG features",
+  "framework": "scikit-learn"
+}

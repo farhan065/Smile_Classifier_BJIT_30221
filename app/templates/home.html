@@ -19,6 +19,35 @@
 </div>
 
 <div class="card">
+  <h2>Current model status</h2>
+  {% if model_info %}
+    {% if model_info.accuracy %}
+    <p style="font-size:1.1rem;">
+      Accuracy:
+      <span class="result-badge badge-smiling">{{ model_info.accuracy }}%</span>
+    </p>
+    <p class="hint">Measured using {{ model_info.evaluation }}.</p>
+    {% else %}
+    <p>
+      <span class="result-badge badge-not-smiling">Accuracy not available</span>
+    </p>
+    <p class="hint">{{ model_info.evaluation }}.</p>
+    {% endif %}
+    <ul>
+      <li><strong>Model:</strong> {{ model_info.model_type }}</li>
+      <li><strong>Framework:</strong> {{ model_info.framework }}</li>
+      <li><strong>Trained on:</strong> {{ model_info.total_images }} images
+          ({{ model_info.per_class.smile }} smiling,
+           {{ model_info.per_class.non_smile }} not smiling)</li>
+      <li><strong>Data source:</strong> {{ model_info.source }}</li>
+      <li><strong>Last trained:</strong> {{ model_info.trained_at }}</li>
+    </ul>
+  {% else %}
+    <p>No trained model found. Visit the Train page to train one.</p>
+  {% endif %}
+</div>
+
+<div class="card">
   <h2>Framework &amp; model — and why</h2>
   <p>
     The classifier is built with <strong>scikit-learn</strong>, a mature and
@@ -43,8 +72,10 @@
         inputs are uniform.</li>
     <li>HOG features are extracted from each image, turning it into a vector
         of numbers the model can learn from.</li>
-    <li>A <strong>StandardScaler + SVM pipeline</strong> is trained; 20% of the
-        data is held back to measure honest accuracy on unseen images.</li>
+    <li>A <strong>StandardScaler + SVM pipeline</strong> is trained. On the full
+        dataset, 20% of the images are held back to measure honest accuracy on
+        unseen faces; for smaller batches uploaded through the Train page,
+        accuracy is estimated with <strong>k-fold cross-validation</strong>.</li>
     <li>The trained pipeline is saved to a <strong>pickle file</strong> so it
         can be reused without retraining.</li>
   </ul>

@@ -47,6 +47,7 @@ ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 UPLOAD_DIR = BASE_DIR / "app" / "static" / "uploads"
 MODEL_PATH = BASE_DIR / "model" / "smile_model.pkl"
 DATA_DIR = BASE_DIR / "data"
+MODEL_META_PATH = BASE_DIR / "model" / "model_meta.json"
 
 # Staging folder where Train-page uploads accumulate by class before training.
 TRAIN_UPLOAD_DIR = BASE_DIR / "app" / "static" / "train_uploads"
